@@ -1,0 +1,8 @@
+target
+build.log
+.buildcmd
+.direnv/
+shell.nix
+.envrc
+testnote.json
+rusty-tags.vi
