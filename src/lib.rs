@@ -18,9 +18,9 @@
 //! ## Example: Encoding a Note
 //!
 //! ```rust
-//! use notepack::{Note, pack_note_to_string};
+//! use notepack::{NoteBuf, pack_note_to_string};
 //!
-//! let note = Note {
+//! let note = NoteBuf {
 //!     id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
 //!     pubkey: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
 //!     created_at: 1753898766,
@@ -86,7 +86,7 @@ mod stringtype;
 mod varint;
 
 pub use error::Error;
-pub use note::Note;
+pub use note::{Note, NoteBuf, Tags, TagElems};
 pub use parser::{NoteParser, ParsedField, ParserState};
 pub use stringtype::StringType;
 
@@ -111,13 +111,13 @@ use varint::{write_tagged_varint, write_varint};
 /// # Example
 ///
 /// ```rust
-/// use notepack::{Note, pack_note};
+/// use notepack::{NoteBuf, pack_note};
 ///
-/// let note = Note::default();
+/// let note = NoteBuf::default();
 /// let binary = pack_note(&note).unwrap();
 /// assert!(binary.len() > 0);
 /// ```
-pub fn pack_note(note: &Note) -> Result<Vec<u8>, Error> {
+pub fn pack_note(note: &NoteBuf) -> Result<Vec<u8>, Error> {
     let mut buf = Vec::new();
 
     // version
@@ -141,11 +141,12 @@ pub fn pack_note(note: &Note) -> Result<Vec<u8>, Error> {
     buf.extend_from_slice(note.content.as_bytes());
 
     write_varint(&mut buf, note.tags.len() as u64);
+
     for tag in &note.tags {
         write_varint(&mut buf, tag.len() as u64);
 
         for elem in tag {
-            write_string(&mut buf, elem);
+            write_string(&mut buf, &elem);
         }
     }
 
@@ -166,13 +167,13 @@ pub fn pack_note(note: &Note) -> Result<Vec<u8>, Error> {
 /// # Example
 ///
 /// ```rust
-/// use notepack::{Note, pack_note_to_string};
+/// use notepack::{NoteBuf, pack_note_to_string};
 ///
-/// let note = Note::default();
+/// let note = NoteBuf::default();
 /// let s = pack_note_to_string(&note).unwrap();
 /// assert!(s.starts_with("notepack_"));
 /// ```
-pub fn pack_note_to_string(note: &Note) -> Result<String, Error> {
+pub fn pack_note_to_string(note: &NoteBuf) -> Result<String, Error> {
     let bytes = pack_note(note)?;
     Ok(format!("notepack_{}", base64_encode(&bytes)))
 }

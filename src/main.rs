@@ -1,4 +1,4 @@
-use notepack::{Error, Note, NoteParser, ParsedField, StringType, pack_note_to_string};
+use notepack::{Error, NoteBuf, NoteParser, ParsedField, StringType, pack_note_to_string};
 use std::io;
 
 fn main() -> Result<(), Error> {
@@ -8,13 +8,13 @@ fn main() -> Result<(), Error> {
 
     if let Ok(packed) = NoteParser::decode(buffer.trim()) {
         let parser = NoteParser::new(&packed);
-        let mut note = Note::default();
+        let mut note = NoteBuf::default();
         for field in parser {
             process_field(&mut note, field?);
         }
         println!("{}", serde_json::to_string(&note)?);
     } else {
-        let note: Note = serde_json::from_str(trimmed).expect("decode ok");
+        let note: NoteBuf = serde_json::from_str(trimmed).expect("decode ok");
         let packed = pack_note_to_string(&note).expect("packed ok");
         println!("{packed}");
     }
@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn process_field(note: &mut Note, field: ParsedField<'_>) {
+fn process_field(note: &mut NoteBuf, field: ParsedField<'_>) {
     match field {
         ParsedField::Version(_v) => {}
         ParsedField::Id(id) => {
