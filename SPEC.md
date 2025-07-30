@@ -97,8 +97,7 @@ notepack-string = "notepack_" + base64_nopad(notepack-binary)
 
    * For every element in a tag, first write a **tagged‑varint** with:
      `raw = (len << 1) | is_bytes`, then write `len` bytes of payload.
-   * Encoders SHOULD choose **Bytes** for data that is truly binary (e.g., 32‑byte ids) and **Str** for human text.
-     The reference encoder uses an aggressive heuristic: *if a tag element **string** is valid **lower-cased** hex, it is encoded as **Bytes***
+   * Encoders MUST choose **Bytes** for any **lower-cased**, hex-decodable string
 
 5. **String wrapper**
 
