@@ -185,7 +185,7 @@ fn base64_encode(bs: &[u8]) -> String {
 
 /// Only lower cased hex are allowed, otherwise encoding
 /// wouldn't round-trip
-fn decode_lowercase_hex(input: &str) -> Result<Vec<u8>, Error>  {
+fn decode_lowercase_hex(input: &str) -> Result<Vec<u8>, Error> {
     // Reject uppercase hex
     if input.chars().any(|c| c.is_ascii_uppercase()) {
         return Err(Error::FromHex);
