@@ -14,8 +14,6 @@
 //!
 //! - **Compact binary format** using varint encoding for integers.
 //! - **Streaming parser**: no allocation-heavy parsing; fields are yielded one by one as they’re read.
-//! - **Safe round-tripping**: encode [`Note`] → `notepack_...` string → parse back into [`Note`].
-//! - **Error handling** with [`Error`] for truncated data, varint overflows, UTF-8 issues, etc.
 //!
 //! ## Example: Encoding a Note
 //!
