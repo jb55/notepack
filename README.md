@@ -106,17 +106,6 @@ echo 'notepack_AAECA...' | notepack
 
 ---
 
-## 🔍 Specification
-
-* **Fixed width** for `id`, `pubkey`, `sig` (32/32/64 bytes).
-* **ULEB128 varints** for timestamps, lengths, etc.
-* **Tagged‑varint** for tag elements (`is_bytes` vs `UTF‑8`).
-* **String form**: `notepack_` + Base64 **no padding**.
-
-See [SPEC.md](src/SPEC.md) for deep details, diagrams, and test vectors.
-
----
-
 ## 📂 Project Structure
 
 ```
