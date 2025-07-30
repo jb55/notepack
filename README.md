@@ -2,7 +2,7 @@
 
 [![Docs.rs](https://docs.rs/notepack/badge.svg)](https://docs.rs/notepack) [![Crates.io](https://img.shields.io/crates/v/notepack.svg)](https://crates.io/crates/notepack)
 
-**notepack** is a **compact binary note** format for [nostr](https://github.com/nostr-protocol/nostr), with a [specification](./SPEC.md) and reference implementation in Rust.
+**notepack** is a **compact binary note** format for [nostr](https://github.com/nostr-protocol/nostr) [notes][nip01], with a [specification](./SPEC.md) and reference implementation in Rust.
 
 It ships with:
 
@@ -134,3 +134,4 @@ src
 MIT — do whatever you want, but attribution is appreciated.
 
 [nostrdb]: https://github.com/damus-io/nostrdb
+[nip01]: https://github.com/nostr-protocol/nips/blob/master/01.md#events-and-signatures
