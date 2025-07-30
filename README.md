@@ -15,7 +15,7 @@ notepack is a **binary serialization** for Nostr “events” (`Note`), plus a r
 It aims to:
 
 * **Shrink payloads** using unsigned LEB128 (“varint”) integers.
-* Store **common cryptographic fields** (id, pubkey, sig) as raw bytes.
+* Store **note fields** (id, pubkey, sig) and **hex tag payloads** as raw bytes.
 * Preserve **UTF‑8** for text fields.
 * Provide a **copy‑pasteable string** starting with `notepack_` + Base64 (RFC 4648, no padding).
 
@@ -23,29 +23,11 @@ It aims to:
 
 ---
 
-## 📂 Project Structure
-
-```
-src
-├── SPEC.md         # Full binary format spec
-├── error.rs        # Unified error type for encoding/decoding
-├── lib.rs          # Crate entrypoint
-├── main.rs         # CLI tool: JSON ↔ notepack
-├── note.rs         # `Note` struct (Nostr event model)
-├── parser.rs       # Streaming `NoteParser`
-├── stringtype.rs   # String vs raw byte tags
-└── varint.rs       # LEB128 varint helpers
-```
-
----
-
 ## ✨ Features
 
 * ✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
 * ✅ **Streaming parser:** No massive allocations; parse incrementally.
-* ✅ **Safe round‑tripping:** Encode → decode → same note back.
 * ✅ **CLI tool:** Turn JSON Nostr events into compact strings or back again.
-* ✅ **Strict error handling:** Detects truncated data, overflow, bad UTF‑8, etc.
 
 ---
 
@@ -109,7 +91,7 @@ echo 'notepack_AAECA...' | notepack
 
 ---
 
-## 🔍 Spec Highlights
+## 🔍 Specification
 
 * **Fixed width** for `id`, `pubkey`, `sig` (32/32/64 bytes).
 * **ULEB128 varints** for timestamps, lengths, etc.
@@ -119,6 +101,20 @@ echo 'notepack_AAECA...' | notepack
 See [SPEC.md](src/SPEC.md) for deep details, diagrams, and test vectors.
 
 ---
+
+## 📂 Project Structure
+
+```
+src
+├── SPEC.md         # Full binary format spec
+├── error.rs        # Unified error type for encoding/decoding
+├── lib.rs          # Crate entrypoint
+├── main.rs         # CLI tool: JSON ↔ notepack
+├── note.rs         # `Note` struct (Nostr event model)
+├── parser.rs       # Streaming `NoteParser`
+├── stringtype.rs   # String vs raw byte tags
+└── varint.rs       # LEB128 varint helpers
+```
 
 ## 📜 License
 
