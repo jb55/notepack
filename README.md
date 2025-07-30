@@ -25,11 +25,29 @@ It aims to:
 
 ## ✨ Features
 
-* ✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
-* ✅ **Streaming parser:** No massive allocations; parse incrementally.
 * ✅ **CLI tool:** Turn JSON Nostr events into compact strings or back again.
+* ✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
+* ✅ **50% size reduction** Many large events like contact lists see a 50% reduction in size
+* ✅ **Simple** So simple, I'm proposing it as the candidate for nostr's canonical binary representation
+* ✅ **Streaming parser:** No massive allocations; parse incrementally.
 
 ---
+
+## Example
+
+```
+$ notepack <<<'{"id": "f1e7bc2a9756453fcc0e80ecf62183fa95b9a1278a01281dbc310b6777320e80","pubkey": "7fe437db5884ee013f701a75f8d1a84ecb434e997f2a31411685551ffff1b841","created_at": 1753900182,"kind": 1,"tags": [],"content": "hi","sig": "75507f84d78211a68f2f964221f5587aa957a66c1941d01125caa07b9aabdf5a98c3e63d1fe1e307cbf01b74b0a1b95ffe636eb6746c00167e0d48e5b11032d5"}'
+
+
+{"id": "f1e7bc2a9756453fcc0e80ecf62183fa95b9a1278a01281dbc310b6777320e80","pubkey": "7fe437db5884ee013f701a75f8d1a84ecb434e997f2a31411685551ffff1b841","created_at": 1753900182,"kind": 1,"tags": [],"content": "hi","sig": "75507f84d78211a68f2f964221f5587aa957a66c1941d01125caa07b9aabdf5a98c3e63d1fe1e307cbf01b74b0a1b95ffe636eb6746c00167e0d48e5b11032d5"}
+
+notepack_AfHnvCqXVkU/zA6A7PYhg/qVuaEnigEoHbwxC2d3Mg6Af+Q321iE7gE/cBp1+NGoTstDTpl/KjFBFoVVH//xuEF1UH+E14IRpo8vlkIh9Vh6qVembBlB0BElyqB7mqvfWpjD5j0f4eMHy/AbdLChuV/+Y262dGwAFn4NSOWxEDLVlsmpxAYBAmhpAA
+```
+
+* json string: 363 bytes
+* notepack string: 124 bytes raw, 196 base64-encoded
+
+For large contact lists, you can crunch them down from 74kb to about 36kb.
 
 ## 📦 Usage (Library)
 
