@@ -1,4 +1,4 @@
-use crate::PackError;
+use crate::Error;
 
 pub fn write_varint(buf: &mut Vec<u8>, mut n: u64) -> usize {
     let mut len = 0;
@@ -17,7 +17,7 @@ pub fn write_varint(buf: &mut Vec<u8>, mut n: u64) -> usize {
     len
 }
 
-pub fn read_varint(input: &mut &[u8]) -> Result<u64, PackError> {
+pub fn read_varint(input: &mut &[u8]) -> Result<u64, Error> {
     let mut n = 0u64;
     let mut shift = 0u32;
 
@@ -33,13 +33,13 @@ pub fn read_varint(input: &mut &[u8]) -> Result<u64, PackError> {
 
         shift += 7;
         if shift >= 64 {
-            return Err(PackError::VarintOverflow);
+            return Err(Error::VarintOverflow);
         }
     }
-    Err(PackError::VarintUnterminated)
+    Err(Error::VarintUnterminated)
 }
 
-pub fn read_tagged_varint(input: &mut &[u8]) -> Result<(u64, bool), PackError> {
+pub fn read_tagged_varint(input: &mut &[u8]) -> Result<(u64, bool), Error> {
     let raw = read_varint(input)?;
     Ok((raw >> 1, (raw & 1) != 0))
 }

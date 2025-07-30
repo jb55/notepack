@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Event is the struct used to represent a Nostr event
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Note {
     /// 32-bytes sha256 of the the serialized event data
     pub id: String,

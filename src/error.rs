@@ -1,54 +1,68 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PackError {
+#[derive(Debug)]
+pub enum Error {
     Truncated,
     VarintOverflow,
     VarintUnterminated,
     Utf8(std::str::Utf8Error),
     FromHex,
     Decode(base64::DecodeError),
+    InvalidPrefix,
+    Json(serde_json::Error),
 }
 
-impl core::fmt::Display for PackError {
+impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            PackError::Truncated => {
+            Error::Truncated => {
                 write!(f, "notepack string is truncated")
             }
-            PackError::VarintOverflow => {
+            Error::VarintOverflow => {
                 write!(f, "varint overflowed")
             }
-            PackError::VarintUnterminated => {
+            Error::VarintUnterminated => {
                 write!(f, "varint is unterminated")
             }
-            PackError::Utf8(err) => {
+            Error::Utf8(err) => {
                 write!(f, "utf8 error: {err}")
             }
-            PackError::FromHex => {
+            Error::FromHex => {
                 write!(f, "error when converting from hex")
             }
-            PackError::Decode(err) => {
+            Error::Decode(err) => {
                 write!(f, "base64 decode err: {err}")
+            }
+            Error::InvalidPrefix => {
+                write!(f, "String did not start with notepack_")
+            }
+            Error::Json(err) => {
+                write!(f, "json error: {err}")
             }
         }
     }
 }
 
-impl From<std::str::Utf8Error> for PackError {
+impl From<std::str::Utf8Error> for Error {
     fn from(err: std::str::Utf8Error) -> Self {
-        PackError::Utf8(err)
+        Error::Utf8(err)
     }
 }
 
-impl From<base64::DecodeError> for PackError {
+impl From<base64::DecodeError> for Error {
     fn from(err: base64::DecodeError) -> Self {
-        PackError::Decode(err)
+        Error::Decode(err)
     }
 }
 
-impl From<hex::FromHexError> for PackError {
+impl From<hex::FromHexError> for Error {
     fn from(_err: hex::FromHexError) -> Self {
-        PackError::FromHex
+        Error::FromHex
     }
 }
 
-impl std::error::Error for PackError {}
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Error::Json(err)
+    }
+}
+
+impl std::error::Error for Error {}
