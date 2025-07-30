@@ -1,5 +1,7 @@
 # notepack
 
+[![Docs.rs](https://docs.rs/notepack/badge.svg)](https://docs.rs/notepack) [![Crates.io](https://img.shields.io/crates/v/notepack.svg)](https://crates.io/crates/notepack)
+
 **notepack** is a Rust library and CLI for encoding and decoding [nostr](https://github.com/nostr-protocol/nostr) notes into a **compact binary format**.
 
 It ships with:
