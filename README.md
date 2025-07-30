@@ -16,7 +16,7 @@ It ships with:
 ## ✨ Features
 
 * **Copy‑pasteable string** starting with `notepack_` + Base64 (RFC 4648, no padding).
-* **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
+* **Compact:** Every integer is ULEB128 varint. hex strings in tags are **encoded as bytes**.
 * **50% size reduction:** Many large events like contact lists see a 50% reduction in size
 * **Simple:** So simple its a candidate for nostr's canonical binary representation
 
