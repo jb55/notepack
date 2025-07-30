@@ -46,7 +46,7 @@ pub fn pack_note(note: &Note) -> Result<Vec<u8>, Error> {
     Ok(buf)
 }
 
-pub fn write_string(buf: &mut Vec<u8>, string: &str) {
+fn write_string(buf: &mut Vec<u8>, string: &str) {
     // we check to see if the entire string is 32-byte-hex
     if string.is_empty() {
         write_tagged_varint(buf, 0, false);
