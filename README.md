@@ -22,6 +22,26 @@ It ships with:
 
 ---
 
+## Benchmarks
+
+```
+$ cargo bench
+```
+
+Contact list note with 1022 tags:
+
+* **notepack-decode**: 2GB/s, 15 microseconds
+* **json-decode**: 711MB/s, 100 microseconds
+
+The numbers start to count when you are decoding lots of notes: 1000 notes would take 100ms with json, 15ms with notepack.
+
+If not iterating tags, notepack gets up to 1TB/s at 30 nanoseconds. That's only 0.03ms for 1000 notes if you're not verifying and just want to check a few fields as they stream in.
+
+...but didn't feel like that was a fair comparison since you'll likely need to iterate the tags to verify the note.
+
+I have lots of hacks in [nostrdb][nostrdb] to do incremental json parsing for note de-duplication/note rejection. with notepack you can get the ID and skip it in less than 15 microseconds.
+
+
 ## Example
 
 ```
@@ -112,3 +132,5 @@ src
 ## 📜 License
 
 MIT — do whatever you want, but attribution is appreciated.
+
+[nostrdb]: https://github.com/damus-io/nostrdb
