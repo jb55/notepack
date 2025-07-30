@@ -3,6 +3,7 @@ name = "notepack"
 version = "0.1.0"
 edition = "2024"
 description = "A compact binary format and Rust library for encoding and decoding Nostr notes"
+authors = ["William Casarin <jb55@jb55.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/jb55/notepack"    # update this
