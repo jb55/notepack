@@ -28,7 +28,7 @@ A **Note** has the following logical fields:
 | `created_at` | u64                | Unix timestamp (seconds).                             |
 | `kind`       | u64                | Event kind (0 for NostrEvent in this code).           |
 | `content`    | UTF‑8 string       | Arbitrary text.                                       |
-| `tags`       | Vec\<Vec<TagElem>> | Ordered list of tags; each tag is a list of elements. |
+| `tags`       | Vec\<Vec\<TagElem>> | Ordered list of tags; each tag is a list of elements. |
 
 A **TagElem** is either:
 
