@@ -16,29 +16,29 @@ impl core::fmt::Display for DecodeError {
 
 impl std::error::Error for DecodeError {}
 
-
 /// Base62-encodes arbitrary bytes using the alphabet 0-9A-Za-z.
 /// Interprets `input` as a big-endian integer.
-/// - `b""` -> `""`
-/// - any all-zero input -> `"0"`
+///
+/// Zero-preserving rule (Bitcoin/Base58-style):
+/// - Each leading 0x00 byte in `input` becomes a leading '0' digit.
+/// - Empty input -> ""
+/// - All-zero input of length N -> "0" repeated N times.
 pub fn base62_encode(input: &[u8]) -> String {
     const ALPHABET: &[u8; 62] =
         b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-    // Empty -> empty (preserves your original behavior)
     if input.is_empty() {
         return String::new();
     }
 
-    // Skip leading zero bytes once; if all zeros -> "0"
-    let mut first_nz = 0usize;
-    while first_nz < input.len() && input[first_nz] == 0 {
-        first_nz += 1;
+    // Count leading zero bytes to preserve them as leading '0' digits.
+    let lz = input.iter().take_while(|&&b| b == 0).count();
+    let data = &input[lz..];
+
+    // If the entire input was zeros, return exactly that many '0' digits.
+    if data.is_empty() {
+        return "0".repeat(lz);
     }
-    if first_nz == input.len() {
-        return "0".to_string();
-    }
-    let data = &input[first_nz..];
 
     // Pack into big-endian u64 limbs: limbs[0] is the most-significant limb.
     let mut limbs: Vec<u64> = {
@@ -55,18 +55,15 @@ pub fn base62_encode(input: &[u8]) -> String {
             }
         }
         if cnt != 0 {
-            // Partial least-significant limb (fewer than 8 bytes) is fine as-is.
             v.push(acc);
         }
         v
     };
 
-    // Approximate upper bound on output length: ceil(n_bytes * 8 / log2(62)).
-    // 8 / log2(62) ≈ 1.3427. We'll just reserve 1.35× to avoid re-allocs.
+    // Upper bound on output length for the non-zero tail.
     let mut out = Vec::with_capacity((data.len() as f64 * 1.35).ceil() as usize);
 
-    // Perform division by 62 on 64-bit limbs, collecting remainders.
-    // We slide a "head" index instead of removing from the front.
+    // Long division by 62 collecting remainders.
     let mut head = 0usize;
     while head < limbs.len() {
         let mut carry: u128 = 0;
@@ -77,35 +74,41 @@ pub fn base62_encode(input: &[u8]) -> String {
             limbs[j] = q;
         }
         out.push(ALPHABET[carry as usize]);
-
-        // Skip newly-zero leading limbs in O(1) amortized time.
         while head < limbs.len() && limbs[head] == 0 {
             head += 1;
         }
     }
-
     out.reverse();
-    // ALPHABET is ASCII; if you prefer to avoid the UTF-8 check:
-    // unsafe { String::from_utf8_unchecked(out) }
-    String::from_utf8(out).unwrap()
+
+    // Prefix exactly `lz` '0' digits.
+    let mut s = String::with_capacity(lz + out.len());
+    for _ in 0..lz {
+        s.push('0');
+    }
+    // SAFETY: ALPHABET is ASCII.
+    s.push_str(std::str::from_utf8(&out).unwrap());
+    s
 }
 
-
-/// Decodes a Base62 string (alphabet 0-9A-Za-z) into bytes.
-/// - `""` -> `Ok(vec![])`
-/// - `"0"` -> `Ok(vec![0])`
+/// Decodes a Base62 string (alphabet 0-9A-Za-z) into bytes (big-endian).
 ///
-/// Note: This variant does **not** preserve leading zero bytes that may have
-/// been present before encoding. For example, both `b"\x00"` and `b"\x00\x00"`
-/// encode to `"0"`, which decodes back to `vec![0]`.
+/// Zero-preserving rule (Bitcoin/Base58-style):
+/// - Each leading '0' digit becomes a leading 0x00 byte.
+/// - "" -> Ok(vec![])
+/// - "000" -> Ok(vec![0, 0, 0])
 pub fn base62_decode(s: &str) -> Result<Vec<u8>, DecodeError> {
-    // Empty string -> empty bytes (mirrors encode(b"") -> "")
     if s.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Work on little-endian base-256 limbs for easy carry handling.
-    let mut out: Vec<u8> = vec![0];
+    // Count leading '0' digits to restore them as 0x00 bytes.
+    let bytes = s.as_bytes();
+    let mut idx = 0usize;
+    while idx < bytes.len() && bytes[idx] == b'0' {
+        idx += 1;
+    }
+    let lz = idx;
+    let digits = &bytes[idx..];
 
     // A small helper: map ASCII byte to Base62 value for 0-9A-Za-z.
     #[inline]
@@ -118,10 +121,17 @@ pub fn base62_decode(s: &str) -> Result<Vec<u8>, DecodeError> {
         }
     }
 
-    for (i, &b) in s.as_bytes().iter().enumerate() {
+    // If there are only leading zeros (no other digits), return that many zero bytes.
+    if digits.is_empty() {
+        return Ok(vec![0; lz]);
+    }
+
+    // Decode the non-zero tail into little-endian base-256 limbs.
+    let mut out: Vec<u8> = vec![0];
+    for (i, &b) in digits.iter().enumerate() {
         let d = val(b).ok_or_else(|| DecodeError::InvalidChar {
             ch: b as char,
-            index: i,
+            index: lz + i, // report index relative to the original string
         })?;
 
         // out = out * 62
@@ -137,29 +147,34 @@ pub fn base62_decode(s: &str) -> Result<Vec<u8>, DecodeError> {
         }
 
         // out = out + d
-        let mut carry_add: u32 = d;
+        let mut add_carry: u32 = d;
         for limb in &mut out {
-            let acc = (*limb as u32) + carry_add;
+            let acc = (*limb as u32) + add_carry;
             *limb = (acc & 0xFF) as u8;
-            carry_add = acc >> 8;
-            if carry_add == 0 {
+            add_carry = acc >> 8;
+            if add_carry == 0 {
                 break;
             }
         }
-        while carry_add > 0 {
-            out.push((carry_add & 0xFF) as u8);
-            carry_add >>= 8;
+        while add_carry > 0 {
+            out.push((add_carry & 0xFF) as u8);
+            add_carry >>= 8;
         }
     }
 
-    // Normalize (remove redundant high-order zeros), but keep a single zero if value is zero.
+    // Normalize the numeric part (remove redundant high-order zeros).
     while out.len() > 1 && *out.last().unwrap() == 0 {
         out.pop();
     }
+    out.reverse(); // little-endian -> big-endian
 
-    out.reverse(); // convert little-endian to big-endian
-    Ok(out)
+    // Prepend exactly `lz` zero bytes.
+    let mut res = Vec::with_capacity(lz + out.len());
+    res.extend(std::iter::repeat(0).take(lz));
+    res.extend(out);
+    Ok(res)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -169,17 +184,18 @@ mod tests {
     fn basics() {
         assert_eq!(base62_encode(b""), "");
         assert_eq!(base62_encode(&[0]), "0");
+        assert_eq!(base62_encode(&[0,0]), "00");
         assert_eq!(base62_encode(&[1]), "1");
         assert_eq!(base62_encode(&[255]), "47"); // 255 = 4*62 + 7
         assert_eq!(base62_encode(b"hello"), "7tQLFHz"); // example
-        assert_eq!(base62_encode(b"\x00hello"), "7tQLFHz"); // leading 0s don’t add extra digits
+        assert_eq!(base62_encode(b"\x00hello"), "07tQLFHz"); // leading 0s don’t add extra digits
     }
 
     #[test]
     fn roundtrip_basic() {
         let samples: &[&[u8]] = &[
             b"",
-            &[0],
+            &[0, 0],
             &[1],
             &[255],
             b"hello",
@@ -190,21 +206,7 @@ mod tests {
         for &s in samples {
             let enc = crate::base62_encode(s);
             let dec = base62_decode(&enc).unwrap();
-            // Because the encoder is canonical (no preserved leading zeros),
-            // this roundtrip compares the *numeric value*, not exact prefix zeros.
-            // For empty input, empty output.
-            if s.is_empty() {
-                assert_eq!(dec, b"");
-            } else {
-                // Strip leading zeros from original, to match decode semantics.
-                let i = s.iter().position(|&b| b != 0).unwrap_or(s.len() - 1);
-                let canonical = if s.iter().all(|&b| b == 0) {
-                    vec![0]
-                } else {
-                    s[i..].to_vec()
-                };
-                assert_eq!(dec, canonical, "enc={} s={:?}", enc, s);
-            }
+            assert_eq!(dec, s, "enc={} s={:?}", enc, s);
         }
     }
 
@@ -223,5 +225,17 @@ mod tests {
         assert_eq!(base62_decode("1").unwrap(), vec![1]);
         assert_eq!(base62_decode("47").unwrap(), vec![255]); // from earlier example
         assert_eq!(base62_decode("7tQLFHz").unwrap(), b"hello"); // matches encoder example
+    }
+
+    #[test]
+    fn base62_preserves_leading_zeros() {
+        let input = vec![0x00, 0x00, 0x01, 0x02, 0x03];
+        let encoded = base62_encode(&input);
+        let decoded = base62_decode(&encoded).unwrap();
+
+        assert_eq!(decoded, input, "Base62 must preserve leading zeros");
+        eprintln!("input  = {:02X?}", input);
+        eprintln!("encoded= {}", encoded);
+        eprintln!("decoded= {:02X?}", decoded);
     }
 }
