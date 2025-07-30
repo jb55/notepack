@@ -1,118 +1,15 @@
+mod error;
 mod note;
+mod varint;
 
 use base64::{Engine, engine::general_purpose::STANDARD_NO_PAD};
+pub use error::PackError;
 pub use note::Note;
+use varint::{read_tagged_varint, read_varint, write_tagged_varint, write_varint};
 
 pub enum StringType<'a> {
     Bytes(&'a [u8]),
     Str(&'a str),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PackError {
-    Truncated,
-    VarintOverflow,
-    VarintUnterminated,
-    Utf8(std::str::Utf8Error),
-    FromHex,
-    Decode(base64::DecodeError),
-}
-
-impl core::fmt::Display for PackError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            PackError::Truncated => {
-                write!(f, "notepack string is truncated")
-            }
-            PackError::VarintOverflow => {
-                write!(f, "varint overflowed")
-            }
-            PackError::VarintUnterminated => {
-                write!(f, "varint is unterminated")
-            }
-            PackError::Utf8(err) => {
-                write!(f, "utf8 error: {err}")
-            }
-            PackError::FromHex => {
-                write!(f, "error when converting from hex")
-            }
-            PackError::Decode(err) => {
-                write!(f, "base64 decode err: {err}")
-            }
-        }
-    }
-}
-
-impl From<std::str::Utf8Error> for PackError {
-    fn from(err: std::str::Utf8Error) -> Self {
-        PackError::Utf8(err)
-    }
-}
-
-impl From<base64::DecodeError> for PackError {
-    fn from(err: base64::DecodeError) -> Self {
-        PackError::Decode(err)
-    }
-}
-
-impl From<hex::FromHexError> for PackError {
-    fn from(_err: hex::FromHexError) -> Self {
-        PackError::FromHex
-    }
-}
-
-impl std::error::Error for PackError {}
-
-fn write_varint(buf: &mut Vec<u8>, mut n: u64) -> usize {
-    let mut len = 0;
-    loop {
-        let mut b = (n & 0x7F) as u8; // low 7 bits
-        n >>= 7;
-        if n != 0 {
-            b |= 0x80; // continuation
-        }
-        buf.push(b);
-        len += 1;
-        if n == 0 {
-            break;
-        }
-    }
-    len
-}
-
-pub fn write_tagged_varint(buf: &mut Vec<u8>, value: u64, tagged: bool) -> usize {
-    let tagged = value
-        .checked_shl(1)
-        .expect("value too large for tagged varint")
-        | (tagged as u64);
-    write_varint(buf, tagged)
-}
-
-pub fn read_varint(input: &mut &[u8]) -> Result<u64, PackError> {
-    let mut n = 0u64;
-    let mut shift = 0u32;
-
-    for i in 0..input.len() {
-        let b = input[i];
-        let chunk = (b & 0x7F) as u64;
-        n |= chunk << shift;
-
-        if b & 0x80 == 0 {
-            *input = &input[i + 1..]; // advance the slice handle
-            return Ok(n);
-        }
-
-        shift += 7;
-        if shift >= 64 {
-            return Err(PackError::VarintOverflow);
-        }
-    }
-    Err(PackError::VarintUnterminated)
-}
-
-pub fn read_tagged_varint_adv(input: &mut &[u8]) -> Result<(u64, bool), PackError> {
-    let raw = read_varint(input)?;
-    Ok((raw >> 1, (raw & 1) != 0))
 }
 
 pub fn pack_note(note: &Note) -> Result<Vec<u8>, PackError> {
@@ -140,7 +37,7 @@ pub fn pack_note(note: &Note) -> Result<Vec<u8>, PackError> {
         write_varint(&mut buf, tag.len() as u64);
 
         for elem in tag {
-            write_string(&mut buf, &elem);
+            write_string(&mut buf, elem);
         }
     }
 
@@ -170,7 +67,7 @@ pub fn read_bytes<'a>(len: u64, input: &mut &'a [u8]) -> Result<&'a [u8], PackEr
 }
 
 pub fn read_string<'a>(input: &mut &'a [u8]) -> Result<StringType<'a>, PackError> {
-    let (len, is_bytes) = read_tagged_varint_adv(input)?;
+    let (len, is_bytes) = read_tagged_varint(input)?;
     if input.len() < len as usize {
         return Err(PackError::Truncated);
     }
@@ -202,7 +99,6 @@ pub fn unpack_note_from_string(string: &str) -> Result<String, PackError> {
     let mut data: &[u8] = &bytes;
 
     let id = read_bytes(32, &mut data)?;
-    eprintln!("");
     eprintln!("id:{}", hex::encode(id));
 
     let pk = read_bytes(32, &mut data)?;
@@ -238,8 +134,9 @@ pub fn unpack_note_from_string(string: &str) -> Result<String, PackError> {
                 }
             }
         }
-        eprintln!("");
+        eprintln!();
     }
+    eprintln!();
 
     Ok(hex::encode(bytes))
     //Ok("".to_string())

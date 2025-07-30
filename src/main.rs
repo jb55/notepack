@@ -6,9 +6,9 @@ fn main() {
     io::stdin().read_line(&mut buffer).expect("line");
     let trimmed = buffer.trim();
 
-    if trimmed.starts_with("notepack_") {
+    if let Some(stripped) = trimmed.strip_prefix("notepack_") {
         // unpack
-        let hex = notepack::unpack_note_from_string(&trimmed[9..]).expect("unpack ok");
+        let hex = notepack::unpack_note_from_string(stripped).expect("unpack ok");
         println!("{hex}");
     } else {
         // pack

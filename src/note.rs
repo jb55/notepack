@@ -1,5 +1,4 @@
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Event is the struct used to represent a Nostr event
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -20,3 +19,13 @@ pub struct Note {
     /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
     pub sig: String,
 }
+
+/*
+trait NoteLike<'a> {
+    type Note;
+
+    fn id(&'a) -> &'a [u8; 32]
+    fn pubkey(&'a) -> &'a [u8; 32]
+    fn sig(&'a) -> &'a [u8; 64]
+}
+*/
