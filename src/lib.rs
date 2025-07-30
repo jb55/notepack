@@ -183,6 +183,22 @@ fn base64_encode(bs: &[u8]) -> String {
     STANDARD_NO_PAD.encode(bs)
 }
 
+/// Only lower cased hex are allowed, otherwise encoding
+/// wouldn't round-trip
+fn decode_lowercase_hex(input: &str) -> Result<Vec<u8>, Error>  {
+    // Reject uppercase hex
+    if input.chars().any(|c| c.is_ascii_uppercase()) {
+        return Err(Error::FromHex);
+    }
+
+    // Reject odd-length hex strings
+    if input.len() % 2 != 0 {
+        return Err(Error::FromHex);
+    }
+
+    Ok(hex::decode(input)?)
+}
+
 fn write_string(buf: &mut Vec<u8>, string: &str) {
     // we check to see if the entire string is 32-byte-hex
     if string.is_empty() {
@@ -190,7 +206,7 @@ fn write_string(buf: &mut Vec<u8>, string: &str) {
         return;
     }
 
-    if let Ok(val) = hex::decode(string) {
+    if let Ok(val) = decode_lowercase_hex(string) {
         write_tagged_varint(buf, val.len() as u64, true);
         buf.extend_from_slice(&val);
     } else {

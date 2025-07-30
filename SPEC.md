@@ -20,15 +20,15 @@ The format is deliberately simple: fixed‑width binary for the three cryptograp
 
 A **Note** has the following logical fields:
 
-| Field        | Type               | Meaning / Constraints                                 |
-| ------------ | ------------------ | ----------------------------------------------------- |
-| `id`         | 32 bytes           | SHA‑256 of serialized event (same as Nostr `id`).     |
-| `pubkey`     | 32 bytes           | Author’s public key.                                  |
-| `sig`        | 64 bytes           | Schnorr signature over `id`.                          |
-| `created_at` | u64                | Unix timestamp (seconds).                             |
-| `kind`       | u64                | Event kind (0 for NostrEvent in this code).           |
-| `content`    | UTF‑8 string       | Arbitrary text.                                       |
-| `tags`       | Vec\<Vec\<TagElem>> | Ordered list of tags; each tag is a list of elements. |
+| Field        | Type                    | Meaning / Constraints                                 |
+| ------------ | ----------------------- | ----------------------------------------------------- |
+| `id`         | 32 bytes                | SHA‑256 of serialized event (same as Nostr `id`).     |
+| `pubkey`     | 32 bytes                | Author’s public key.                                  |
+| `sig`        | 64 bytes                | Schnorr signature over `id`.                          |
+| `created_at` | u64                     | Unix timestamp (seconds).                             |
+| `kind`       | u64                     | Event kind (0 for NostrEvent in this code).           |
+| `content`    | utf8 string             | Arbitrary text.                                       |
+| `tags`       | Vec\<Vec\<utf8 string>> | Ordered list of tags; each tag is a list of elements. |
 
 A **TagElem** is either:
 
@@ -75,7 +75,7 @@ tag_elem =
 
 * `tagged_varint` packs `(len << 1) | tagBit` into a ULEB128:
 
-  * `is_bytes == 1` → payload is **raw bytes**.
+  * `is_bytes == 1` → payload is a **lower-cased hex-encoded string**, represented as **raw bytes**.
   * `is_bytes == 0` → payload is **UTF‑8 text**.
 
 > **Note:** `content` uses a plain `varint(len)` + bytes and is **always UTF‑8 text**; only tag elements are tagged as text/bytes.
@@ -113,7 +113,7 @@ notepack-string = "notepack_" + base64_nopad(notepack-binary)
    * For every element in a tag, first write a **tagged‑varint** with:
      `raw = (len << 1) | is_bytes`, then write `len` bytes of payload.
    * Encoders SHOULD choose **Bytes** for data that is truly binary (e.g., 32‑byte ids) and **Str** for human text.
-     The reference encoder uses an aggressive heuristic: *if a tag element **string** is valid hex, it is encoded as **Bytes***
+     The reference encoder uses an aggressive heuristic: *if a tag element **string** is valid **lower-cased** hex, it is encoded as **Bytes***
 
 5. **String wrapper**
 
