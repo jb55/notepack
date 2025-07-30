@@ -1,7 +1,6 @@
-mod base62;
 mod note;
 
-use base62::{base62_decode, base62_encode};
+use base64::{Engine, engine::general_purpose::STANDARD_NO_PAD};
 pub use note::Note;
 
 pub enum StringType<'a> {
@@ -16,7 +15,7 @@ pub enum PackError {
     VarintUnterminated,
     Utf8(std::str::Utf8Error),
     FromHex,
-    Decode,
+    Decode(base64::DecodeError),
 }
 
 impl core::fmt::Display for PackError {
@@ -37,8 +36,8 @@ impl core::fmt::Display for PackError {
             PackError::FromHex => {
                 write!(f, "error when converting from hex")
             }
-            PackError::Decode => {
-                write!(f, "base62 decode err")
+            PackError::Decode(err) => {
+                write!(f, "base64 decode err: {err}")
             }
         }
     }
@@ -50,15 +49,15 @@ impl From<std::str::Utf8Error> for PackError {
     }
 }
 
-impl From<hex::FromHexError> for PackError {
-    fn from(_err: hex::FromHexError) -> Self {
-        PackError::FromHex
+impl From<base64::DecodeError> for PackError {
+    fn from(err: base64::DecodeError) -> Self {
+        PackError::Decode(err)
     }
 }
 
-impl From<base62::DecodeError> for PackError {
-    fn from(_err: base62::DecodeError) -> Self {
-        PackError::Decode
+impl From<hex::FromHexError> for PackError {
+    fn from(_err: hex::FromHexError) -> Self {
+        PackError::FromHex
     }
 }
 
@@ -187,11 +186,19 @@ pub fn read_string<'a>(input: &mut &'a [u8]) -> Result<StringType<'a>, PackError
 
 pub fn pack_note_to_string(note: &Note) -> Result<String, PackError> {
     let bytes = pack_note(note)?;
-    Ok(format!("notepack_{}", base62_encode(&bytes)))
+    Ok(format!("notepack_{}", base64_encode(&bytes)))
+}
+
+fn base64_encode(bs: &[u8]) -> String {
+    STANDARD_NO_PAD.encode(bs)
+}
+
+fn base64_decode(s: &str) -> Result<Vec<u8>, base64::DecodeError> {
+    STANDARD_NO_PAD.decode(s)
 }
 
 pub fn unpack_note_from_string(string: &str) -> Result<String, PackError> {
-    let bytes = base62_decode(string)?;
+    let bytes = base64_decode(string)?;
     let mut data: &[u8] = &bytes;
 
     let id = read_bytes(32, &mut data)?;
