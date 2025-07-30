@@ -40,7 +40,7 @@
 //! ```rust
 //! use notepack::{NoteParser, ParsedField};
 //!
-//! let b64 = "notepack_..."; // from somewhere
+//! let b64 = "notepack_737yskaxtaKQSL3IPPhOOR8T1R4G/f4ARPHGeNPfOpF4417q9YtU+4JZGOD3+Y0S3uVU6/edo64oTqJQ0pOF29Ms7GmX6fzM4Wjc6sohGPlbdRGLjhuqIRccETX5DliwUFy9qGg2lDD9oMl8ijoNFq4wwJ5Ikmr4Vh7NYWBwOkuo/anEBgECaGkA";
 //! let bytes = NoteParser::decode(b64).unwrap();
 //! let parser = NoteParser::new(&bytes);
 //!
