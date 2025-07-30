@@ -9,29 +9,16 @@ It ships with:
 * 📦 **A Rust crate** — for embedding notepack logic into apps, relays, or tooling.
 * 💻 **A CLI tool** — for piping JSON ↔ `notepack_…` strings in scripts.
 
----
-
-## 🚀 What is notepack?
-
-notepack is a **binary serialization** for Nostr “events” (`Note`), plus a recognizable string form.
-It aims to:
-
-* **Shrink payloads** using unsigned LEB128 (“varint”) integers.
-* Store **note fields** (id, pubkey, sig) and **hex tag payloads** as raw bytes.
-* Preserve **UTF‑8** for text fields.
-* Provide a **copy‑pasteable string** starting with `notepack_` + Base64 (RFC 4648, no padding).
-
 📜 See [`SPEC.md`](SPEC.md) for the full format specification.
 
 ---
 
 ## ✨ Features
 
-* ✅ **CLI tool:** Turn JSON Nostr events into compact strings or back again.
-* ✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
-* ✅ **50% size reduction** Many large events like contact lists see a 50% reduction in size
-* ✅ **Simple** So simple, I'm proposing it as the candidate for nostr's canonical binary representation
-* ✅ **Streaming parser:** No massive allocations; parse incrementally.
+* **Copy‑pasteable string** starting with `notepack_` + Base64 (RFC 4648, no padding).
+* **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
+* **50% size reduction:** Many large events like contact lists see a 50% reduction in size
+* **Simple:** So simple its a candidate for nostr's canonical binary representation
 
 ---
 
