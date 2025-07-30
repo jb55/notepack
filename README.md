@@ -41,11 +41,11 @@ src
 
 ## ✨ Features
 
-✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
-✅ **Streaming parser:** No massive allocations; parse incrementally.
-✅ **Safe round‑tripping:** Encode → decode → same note back.
-✅ **CLI tool:** Turn JSON Nostr events into compact strings or back again.
-✅ **Strict error handling:** Detects truncated data, overflow, bad UTF‑8, etc.
+* ✅ **Compact:** Every integer is ULEB128 varint, tags are tagged‑varint.
+* ✅ **Streaming parser:** No massive allocations; parse incrementally.
+* ✅ **Safe round‑tripping:** Encode → decode → same note back.
+* ✅ **CLI tool:** Turn JSON Nostr events into compact strings or back again.
+* ✅ **Strict error handling:** Detects truncated data, overflow, bad UTF‑8, etc.
 
 ---
 
