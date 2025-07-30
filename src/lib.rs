@@ -113,7 +113,7 @@ use varint::{write_tagged_varint, write_varint};
 /// ```rust
 /// use notepack::{Note, pack_note};
 ///
-/// let note = Note { /* ... */ };
+/// let note = Note::default();
 /// let binary = pack_note(&note).unwrap();
 /// assert!(binary.len() > 0);
 /// ```
@@ -168,7 +168,7 @@ pub fn pack_note(note: &Note) -> Result<Vec<u8>, Error> {
 /// ```rust
 /// use notepack::{Note, pack_note_to_string};
 ///
-/// let note = Note { /* ... */ };
+/// let note = Note::default();
 /// let s = pack_note_to_string(&note).unwrap();
 /// assert!(s.starts_with("notepack_"));
 /// ```
