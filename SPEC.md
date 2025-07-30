@@ -18,22 +18,7 @@ The format is deliberately simple: fixed‑width binary for the three cryptograp
 
 ## 2. Data model
 
-A **Note** has the following logical fields:
-
-| Field        | Type                    | Meaning / Constraints                                 |
-| ------------ | ----------------------- | ----------------------------------------------------- |
-| `id`         | 32 bytes                | SHA‑256 of serialized event (same as Nostr `id`).     |
-| `pubkey`     | 32 bytes                | Author’s public key.                                  |
-| `sig`        | 64 bytes                | Schnorr signature over `id`.                          |
-| `created_at` | u64                     | Unix timestamp (seconds).                             |
-| `kind`       | u64                     | Event kind (0 for NostrEvent in this code).           |
-| `content`    | utf8 string             | Arbitrary text.                                       |
-| `tags`       | Vec\<Vec\<utf8 string>> | Ordered list of tags; each tag is a list of elements. |
-
-A **TagElem** is either:
-
-* **Bytes**: an opaque octet string; or
-* **Str**: a UTF‑8 string.
+* See [NIP01][nip01] note encoding
 
 ---
 
@@ -290,3 +275,5 @@ read_tagged():
 
 * When down‑converting Bytes tag elements to textual formats, hex‑encode in **lowercase** to match common practice.
 * If you need to disambiguate “hex text” from “bytes containing the same value,” change your producer to include a non‑hex character (e.g., `0x...`) so it is encoded as a **Str**.
+
+[nip01]: https://github.com/nostr-protocol/nips/blob/master/01.md#events-and-signatures
