@@ -2,11 +2,18 @@ use notepack::{Error, NoteBuf, NoteParser, ParsedField, StringType, pack_note_to
 use std::io;
 
 fn main() -> Result<(), Error> {
+    let output_hex = std::env::args().any(|arg| arg == "--hex");
+
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer).expect("line");
     let trimmed = buffer.trim();
 
     if let Ok(packed) = NoteParser::decode(buffer.trim()) {
+        if output_hex {
+            println!("{}", hex::encode(&packed));
+            return Ok(());
+        }
+
         let parser = NoteParser::new(&packed);
         let mut note = NoteBuf::default();
         for field in parser {
