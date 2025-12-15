@@ -293,18 +293,34 @@ fn base64_encode(bs: &[u8]) -> String {
 ///
 /// Only lowercase hex is accepted to ensure round-trip encoding works correctly.
 /// Uppercase hex or odd-length strings return [`Error::FromHex`].
+#[cfg(test)]
 fn decode_lowercase_hex(input: &str) -> Result<Vec<u8>, Error> {
-    // Reject uppercase hex
-    if input.chars().any(|c| c.is_ascii_uppercase()) {
-        return Err(Error::FromHex);
-    }
+    let bytes = input.as_bytes();
 
     // Reject odd-length hex strings
-    if !input.len().is_multiple_of(2) {
+    if !bytes.len().is_multiple_of(2) {
         return Err(Error::FromHex);
     }
 
-    Ok(hex_simd::decode_to_vec(input)?)
+    let mut out = Vec::with_capacity(bytes.len() / 2);
+    for i in (0..bytes.len()).step_by(2) {
+        let hi = decode_lower_hex_nibble(bytes[i])?;
+        let lo = decode_lower_hex_nibble(bytes[i + 1])?;
+        out.push((hi << 4) | lo);
+    }
+
+    Ok(out)
+}
+
+#[inline]
+fn decode_lower_hex_nibble(b: u8) -> Result<u8, Error> {
+    match b {
+        b'0'..=b'9' => Ok(b - b'0'),
+        b'a'..=b'f' => Ok(b - b'a' + 10),
+        // Uppercase must be rejected for round-trip stability.
+        b'A'..=b'F' => Err(Error::FromHex),
+        _ => Err(Error::FromHex),
+    }
 }
 
 /// Write a tag element string to a buffer.
@@ -317,13 +333,48 @@ fn write_string(buf: &mut Vec<u8>, string: &str) {
         return;
     }
 
-    if let Ok(val) = decode_lowercase_hex(string) {
-        write_tagged_varint(buf, val.len() as u64, true);
-        buf.extend_from_slice(&val);
-    } else {
+    if !try_write_compacted_hex(buf, string) {
         write_tagged_varint(buf, string.len() as u64, false);
         buf.extend_from_slice(string.as_bytes());
     }
+}
+
+/// Attempt to compact a lowercase hex string directly into `buf`.
+///
+/// This avoids allocating an intermediate `Vec<u8>` for common tag payloads.
+#[inline]
+fn try_write_compacted_hex(buf: &mut Vec<u8>, string: &str) -> bool {
+    let s = string.as_bytes();
+    if !s.len().is_multiple_of(2) {
+        return false;
+    }
+
+    let nbytes = s.len() / 2;
+    let start = buf.len();
+
+    // Write tagged length prefix first; roll back on validation failure.
+    write_tagged_varint(buf, nbytes as u64, true);
+    buf.reserve(nbytes);
+
+    for i in 0..nbytes {
+        let hi = match decode_lower_hex_nibble(s[i * 2]) {
+            Ok(v) => v,
+            Err(_) => {
+                buf.truncate(start);
+                return false;
+            }
+        };
+        let lo = match decode_lower_hex_nibble(s[i * 2 + 1]) {
+            Ok(v) => v,
+            Err(_) => {
+                buf.truncate(start);
+                return false;
+            }
+        };
+        buf.push((hi << 4) | lo);
+    }
+
+    true
 }
 
 /// Write a tag element string to a [`Write`] implementor.
@@ -335,15 +386,85 @@ fn write_string_to<W: Write>(w: &mut W, string: &str) -> std::io::Result<usize> 
         return write_tagged_varint_to(w, 0, false);
     }
 
-    if let Ok(val) = decode_lowercase_hex(string) {
-        let len = write_tagged_varint_to(w, val.len() as u64, true)?;
-        w.write_all(&val)?;
-        Ok(len + val.len())
-    } else {
-        let len = write_tagged_varint_to(w, string.len() as u64, false)?;
-        w.write_all(string.as_bytes())?;
-        Ok(len + string.len())
+    if let Some(nbytes) = try_decode_lower_hex_len(string.as_bytes()) {
+        // Fast paths for the most common sizes (32/64 bytes) without heap allocation.
+        if nbytes == 32 {
+            let mut out = [0u8; 32];
+            if decode_lower_hex_into(string.as_bytes(), &mut out) {
+                let len = write_tagged_varint_to(w, 32, true)?;
+                w.write_all(&out)?;
+                return Ok(len + out.len());
+            }
+        } else if nbytes == 64 {
+            let mut out = [0u8; 64];
+            if decode_lower_hex_into(string.as_bytes(), &mut out) {
+                let len = write_tagged_varint_to(w, 64, true)?;
+                w.write_all(&out)?;
+                return Ok(len + out.len());
+            }
+        } else {
+            let mut out = Vec::with_capacity(nbytes);
+            if decode_lower_hex_into_vec(string.as_bytes(), &mut out) {
+                let len = write_tagged_varint_to(w, nbytes as u64, true)?;
+                w.write_all(&out)?;
+                return Ok(len + out.len());
+            }
+        }
     }
+
+    let len = write_tagged_varint_to(w, string.len() as u64, false)?;
+    w.write_all(string.as_bytes())?;
+    Ok(len + string.len())
+}
+
+#[inline]
+fn try_decode_lower_hex_len(bytes: &[u8]) -> Option<usize> {
+    if bytes.len().is_multiple_of(2) {
+        Some(bytes.len() / 2)
+    } else {
+        None
+    }
+}
+
+#[inline]
+fn decode_lower_hex_into<const N: usize>(bytes: &[u8], out: &mut [u8; N]) -> bool {
+    if bytes.len() != (N * 2) {
+        return false;
+    }
+    for i in 0..N {
+        let hi = match decode_lower_hex_nibble(bytes[i * 2]) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        let lo = match decode_lower_hex_nibble(bytes[i * 2 + 1]) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        out[i] = (hi << 4) | lo;
+    }
+    true
+}
+
+#[inline]
+fn decode_lower_hex_into_vec(bytes: &[u8], out: &mut Vec<u8>) -> bool {
+    if !bytes.len().is_multiple_of(2) {
+        return false;
+    }
+    let n = bytes.len() / 2;
+    out.clear();
+    out.reserve(n);
+    for i in 0..n {
+        let hi = match decode_lower_hex_nibble(bytes[i * 2]) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        let lo = match decode_lower_hex_nibble(bytes[i * 2 + 1]) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        out.push((hi << 4) | lo);
+    }
+    true
 }
 
 #[cfg(test)]
